@@ -33,4 +33,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findBySourceAccount_Id(Long accountId);
 
     List<Transaction> findByDestinationAccount_Id(Long accountId);
+    List<Transaction> findByTimestampBetween(LocalDateTime start, LocalDateTime end);
+    List<Transaction> findByTimestampAfter(LocalDateTime start);
+    List<Transaction> findByTimestampBefore(LocalDateTime end);
+
 }

@@ -126,4 +126,44 @@ public class TransactionService {
         }
         return dto;
     }
+    // Inside TransactionService.java
+    public List<TransactionResponse> getAllTransactions(String startDateString, String endDateString) {
+        List<Transaction> transactions;
+        LocalDateTime startDate = null;
+        LocalDateTime endDate = null;
+
+        // Parse start date
+        if (startDateString != null && !startDateString.isEmpty()) {
+            try {
+                startDate = LocalDateTime.parse(startDateString + "T00:00:00"); // Start of the day
+            } catch (DateTimeParseException e) {
+                throw new IllegalArgumentException("Invalid start date format. Use YYYY-MM-DD.");
+            }
+        }
+
+        // Parse end date
+        if (endDateString != null && !endDateString.isEmpty()) {
+            try {
+                endDate = LocalDateTime.parse(endDateString + "T23:59:59"); // End of the day
+            } catch (DateTimeParseException e) {
+                throw new IllegalArgumentException("Invalid end date format. Use YYYY-MM-DD.");
+            }
+        }
+
+        if (startDate != null && endDate != null) {
+            transactions = transactionRepository.findByTimestampBetween(startDate, endDate);
+        } else if (startDate != null) {
+            transactions = transactionRepository.findByTimestampAfter(startDate);
+        } else if (endDate != null) {
+            transactions = transactionRepository.findByTimestampBefore(endDate);
+        } else {
+            transactions = transactionRepository.findAll(); // Get all transactions if no date filter
+        }
+
+        return transactions.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
+
 }
