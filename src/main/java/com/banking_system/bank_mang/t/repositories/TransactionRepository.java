@@ -21,4 +21,16 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     // Find transactions by reference ID (useful for auditing double-entry)
     Optional<Transaction> findByReferenceId(String referenceId);
+
+    List<Transaction> findBySourceAccount_IdAndTimestampAfter(Long accountId, LocalDateTime startDate);
+
+    List<Transaction> findByDestinationAccount_IdAndTimestampAfter(Long accountId, LocalDateTime startDate);
+
+    List<Transaction> findBySourceAccount_IdAndTimestampBefore(Long accountId, LocalDateTime endDate);
+
+    List<Transaction> findByDestinationAccount_IdAndTimestampBefore(Long accountId, LocalDateTime endDate);
+
+    List<Transaction> findBySourceAccount_Id(Long accountId);
+
+    List<Transaction> findByDestinationAccount_Id(Long accountId);
 }
