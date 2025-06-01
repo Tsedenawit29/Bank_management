@@ -1,4 +1,3 @@
-// src/main/java/com/yourcompany/bankingsystem/service/TransactionService.java
 package com.banking_system.bank_mang.t.service;
 import com.banking_system.bank_mang.t.dto.TransactionResponse;
 import com.banking_system.bank_mang.t.entity.Account;

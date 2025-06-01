@@ -2,13 +2,14 @@ package com.banking_system.bank_mang.t.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.LocalTime;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
 @Entity
 @Table(name = "users")
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 public class User {
@@ -26,12 +27,18 @@ public class User {
 
     private int failedLoginAttempts = 0;
 
-    private LocalTime lockTime;
+    // CHANGE THIS TO LocalDateTime
+    private LocalDateTime lockTime;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name= "user_roles",
-    joinColumns = @JoinColumn(name= "user_id"),
+            joinColumns = @JoinColumn(name= "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles = new HashSet<>();
 
+    public void setCreatedAt(LocalDateTime now) {
+    }
+
+    public void setUpdatedAt(LocalDateTime now) {
+    }
 }

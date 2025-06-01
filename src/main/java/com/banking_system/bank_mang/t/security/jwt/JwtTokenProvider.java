@@ -2,31 +2,43 @@ package com.banking_system.bank_mang.t.security.jwt;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
+import org.springframework.context.annotation.Bean;
 import org.springframework.security.core.Authentication;
 import org.springframework.beans.factory.annotation.Value;
 
-import java.net.HttpRetryException;
-import java.net.MalformedURLException;
+// Remove unnecessary imports if not used
+// import java.net.HttpRetryException;
+// import java.net.MalformedURLException;
+
 import java.security.Key;
-import java.util.Date;
+import java.util.Date; // Keep this
 
 import io.jsonwebtoken.security.Keys;
+import org.springframework.stereotype.Component;
 
+@Component
 public class JwtTokenProvider {
-@Value("$(app.jwt-secret}")
+    @Value("${app.jwt-secret}")
     private String jwtSecret;
-    @Value("$(app.jwt-expiration-milliseconds}")
-    private String jwtExpirationMs;
+
+    @Value("${app.jwt-expiration-milliseconds}")
+    private long jwtExpirationMs; // <--- ***CHANGE THIS TO 'long'***
+
     private Key key(){
         return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
     }
+
     /**
      * Generate a JWT token for authenticated user
      */
     public String generateToken(Authentication authentication){
         String username= authentication.getName();
         Date currentDate= new Date();
-        Date expireDate= new Date(currentDate.getTime() + jwtExpirationMs);
+        // This line was 'Date expireDate= new Date(currentDate.getTime() + jwtExpirationMs);'
+        // If jwtExpirationMs was String, this would try string concatenation, not addition.
+        // With jwtExpirationMs as long, this is now correct numerical addition.
+        Date expireDate= new Date(currentDate.getTime() + jwtExpirationMs); // This was line 32 in your previous stack trace
+
         return Jwts.builder()
                 .setSubject(username)
                 .setIssuedAt(new Date())
@@ -34,6 +46,7 @@ public class JwtTokenProvider {
                 .signWith(key(), SignatureAlgorithm.HS256)
                 .compact();
     }
+
     /**
      * Extracting the username from a Jwt token
      */
@@ -45,6 +58,7 @@ public class JwtTokenProvider {
                 .getBody();
         return claims.getSubject();
     }
+
     /**
      * Validating a Jwt token
      */
@@ -53,18 +67,14 @@ public class JwtTokenProvider {
             Jwts.parserBuilder().setSigningKey(key()).build().parse(token);
             return  true;
         }catch (MalformedJwtException ex){
-            System.err.println("Invalide JWT token: " + ex.getMessage());
+            System.err.println("Invalid JWT token: " + ex.getMessage());
         }catch (ExpiredJwtException ex) {
-            // Log this: Expired JWT token
             System.err.println("Expired JWT token: " + ex.getMessage());
         } catch (UnsupportedJwtException ex) {
-            // Log this: Unsupported JWT token
             System.err.println("Unsupported JWT token: " + ex.getMessage());
         } catch (IllegalArgumentException ex) {
-            // Log this: JWT claims string is empty
             System.err.println("JWT claims string is empty: " + ex.getMessage());
         }
         return false;
     }
-
 }

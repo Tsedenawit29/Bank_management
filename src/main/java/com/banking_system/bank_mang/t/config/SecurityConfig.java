@@ -15,7 +15,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 /**
  * Spring Security configuration for the banking system.
  * Defines security rules, integrates JWT authentication, and configures authorization.
@@ -24,7 +25,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity // Enables Spring Security's web security features
 @EnableMethodSecurity // Enables method-level security annotations like @PreAuthorize
 public class SecurityConfig {
-
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class); // ADD THIS LINE
     private final CustomUserDetailsService userDetailsService;
     private final JwtAuthEntryPoint authEntryPoint;
     private final PasswordEncoder passwordEncoder; // Injected from AppConfig
@@ -36,6 +37,9 @@ public class SecurityConfig {
         this.userDetailsService = userDetailsService;
         this.authEntryPoint = authEntryPoint;
         this.passwordEncoder = passwordEncoder;
+
+        // Log the hash code of the PasswordEncoder instance
+        logger.info("SecurityConfig PasswordEncoder hash: {}", passwordEncoder.hashCode());
     }
 
     /**
@@ -55,6 +59,7 @@ public class SecurityConfig {
      * @return The AuthenticationManager.
      * @throws Exception if an error occurs during configuration.
      */
+
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();

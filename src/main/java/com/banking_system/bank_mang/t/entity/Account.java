@@ -37,4 +37,4 @@ public class Account {
     // Multiple accounts can belong to one user.
     @ManyToOne(fetch = FetchType.LAZY) // Fetch user lazily (only when accessed)
     @JoinColumn(name = "user_id", nullable = false) // Foreign key column in 'accounts' table
-    private User user;
+    private User user;}
