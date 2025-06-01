@@ -1,11 +1,12 @@
 package com.banking_system.bank_mang.t.entity;
+
 import com.banking_system.bank_mang.t.enums.TransactionType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDateTime; // Make sure you have this import
 
 @Entity
 @Table(name = "transactions")
@@ -25,6 +26,7 @@ public class Transaction {
     @Column(nullable = false)
     private BigDecimal amount;
 
+    // ADD THIS CODE HERE:
     @Column(nullable = false)
     private LocalDateTime timestamp = LocalDateTime.now(); // Records when the transaction occurred
 

@@ -1,4 +1,5 @@
 package com.banking_system.bank_mang.t.service;
+
 import  com.banking_system.bank_mang.t.dto.AccountCreationRequest;
 import  com.banking_system.bank_mang.t.dto.AccountDetailsResponse;
 import  com.banking_system.bank_mang.t.entity.Account;
@@ -128,9 +129,14 @@ public class AccountService {
         accountRepository.save(account);
 
         // Log the transaction
-        transactionService.recordTransaction(
-                new Transaction(null, TransactionType.DEPOSIT, amount, null, UUID.randomUUID().toString(), null, account)
-        );
+        Transaction transaction = new Transaction(); // Use no-args constructor
+        transaction.setTransactionType(TransactionType.DEPOSIT);
+        transaction.setAmount(amount);
+        transaction.setReferenceId(UUID.randomUUID().toString());
+        transaction.setDestinationAccount(account); // Deposit goes to this account
+        // Timestamp is set automatically by the entity's default `LocalDateTime.now()`
+
+        transactionService.recordTransaction(transaction);
     }
 
     /**
@@ -159,9 +165,14 @@ public class AccountService {
         accountRepository.save(account);
 
         // Log the transaction
-        transactionService.recordTransaction(
-                new Transaction(null, TransactionType.WITHDRAWAL, amount, null, UUID.randomUUID().toString(), account, null)
-        );
+        Transaction transaction = new Transaction(); // Use no-args constructor
+        transaction.setTransactionType(TransactionType.WITHDRAWAL);
+        transaction.setAmount(amount);
+        transaction.setReferenceId(UUID.randomUUID().toString());
+        transaction.setSourceAccount(account); // Withdrawal from this account
+        // Timestamp is set automatically by the entity's default `LocalDateTime.now()`
+
+        transactionService.recordTransaction(transaction);
     }
 
     /**
@@ -211,16 +222,26 @@ public class AccountService {
         accountRepository.save(destinationAccount);
 
         // Log the transaction (double-entry logging)
-        String referenceId = UUID.randomUUID().toString(); // Unique ID for this transfer operation
+        // IMPORTANT FIX: Generate a NEW UUID for each transaction record
+        // This ensures the unique constraint on 'reference_id' is not violated.
 
         // Debit transaction for source account
-        transactionService.recordTransaction(
-                new Transaction(null, TransactionType.TRANSFER, amount.negate(), null, referenceId, sourceAccount, destinationAccount) // Amount negative for debit
-        );
+        Transaction debitTransaction = new Transaction();
+        debitTransaction.setTransactionType(TransactionType.TRANSFER);
+        debitTransaction.setAmount(amount.negate()); // Amount negative for debit
+        debitTransaction.setReferenceId(UUID.randomUUID().toString()); // <--- NEW UUID generated here
+        debitTransaction.setSourceAccount(sourceAccount);
+        debitTransaction.setDestinationAccount(destinationAccount);
+        transactionService.recordTransaction(debitTransaction);
+
         // Credit transaction for destination account
-        transactionService.recordTransaction(
-                new Transaction(null, TransactionType.TRANSFER, amount, null, referenceId, sourceAccount, destinationAccount)
-        );
+        Transaction creditTransaction = new Transaction();
+        creditTransaction.setTransactionType(TransactionType.TRANSFER);
+        creditTransaction.setAmount(amount);
+        creditTransaction.setReferenceId(UUID.randomUUID().toString()); // <--- NEW UUID generated here
+        creditTransaction.setSourceAccount(sourceAccount);
+        creditTransaction.setDestinationAccount(destinationAccount);
+        transactionService.recordTransaction(creditTransaction);
     }
 
     /**

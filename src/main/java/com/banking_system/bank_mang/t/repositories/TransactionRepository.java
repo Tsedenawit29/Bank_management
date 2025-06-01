@@ -3,6 +3,7 @@ package com.banking_system.bank_mang.t.repositories;
 import com.banking_system.bank_mang.t.entity.Transaction;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,4 +38,19 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findByTimestampAfter(LocalDateTime start);
     List<Transaction> findByTimestampBefore(LocalDateTime end);
 
+    Collection<? extends Transaction> findBySourceAccountIdAndTimestampAfterOrderByTimestampDesc(Long accountId, LocalDateTime startDate);
+
+    Collection<? extends Transaction> findByDestinationAccountIdAndTimestampAfterOrderByTimestampDesc(Long accountId, LocalDateTime startDate);
+
+    Collection<? extends Transaction> findBySourceAccountIdAndTimestampBeforeOrderByTimestampDesc(Long accountId, LocalDateTime endDate);
+
+    Collection<? extends Transaction> findByDestinationAccountIdAndTimestampBeforeOrderByTimestampDesc(Long accountId, LocalDateTime endDate);
+
+    Collection<? extends Transaction> findBySourceAccountId(Long accountId);
+
+    Collection<? extends Transaction> findByDestinationAccountId(Long accountId);
+    List<Transaction> findByTimestampBetweenOrderByTimestampDesc(LocalDateTime start, LocalDateTime end);
+    List<Transaction> findByTimestampAfterOrderByTimestampDesc(LocalDateTime start);
+    List<Transaction> findByTimestampBeforeOrderByTimestampDesc(LocalDateTime end);
+    List<Transaction> findAllByOrderByTimestampDesc(); // To get all transactions, sorted
 }

@@ -1,4 +1,5 @@
 package com.banking_system.bank_mang.t.service;
+
 import com.banking_system.bank_mang.t.dto.TransactionResponse;
 import com.banking_system.bank_mang.t.entity.Account;
 import com.banking_system.bank_mang.t.entity.Transaction;
@@ -10,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
+import java.util.ArrayList; // No longer strictly needed if using .stream().distinct() properly
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -36,6 +37,10 @@ public class TransactionService {
      * @return The saved Transaction entity.
      */
     public Transaction recordTransaction(Transaction transaction) {
+        // The Transaction entity itself should now handle the timestamp default,
+        // so no explicit setting needed here unless you want a fail-safe.
+        // If 'transaction.getTimestamp() == null' check was here before, it can now be removed
+        // if your Transaction entity's default initialization is reliable.
         return transactionRepository.save(transaction);
     }
 
@@ -53,7 +58,7 @@ public class TransactionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found for user: " + username));
 
         Long accountId = account.getId();
-        List<Transaction> transactions;
+        List<Transaction> transactions = new ArrayList<>(); // Initialize to collect results
         LocalDateTime startDate = null;
         LocalDateTime endDate = null;
 
@@ -75,57 +80,37 @@ public class TransactionService {
             }
         }
 
+        // Fetch transactions based on source and destination accounts
         if (startDate != null && endDate != null) {
-            // Both dates provided, filter by range
-            transactions = transactionRepository.findBySourceAccountIdAndTimestampBetweenOrderByTimestampDesc(accountId, startDate, endDate);
-            // Also include transactions where this account is the destination account for transfers
-            List<Transaction> destinationTransactions = transactionRepository.findByDestinationAccountIdAndTimestampBetweenOrderByTimestampDesc(accountId, startDate, endDate);
-            transactions.addAll(destinationTransactions);
+            transactions.addAll(transactionRepository.findBySourceAccountIdAndTimestampBetweenOrderByTimestampDesc(accountId, startDate, endDate));
+            transactions.addAll(transactionRepository.findByDestinationAccountIdAndTimestampBetweenOrderByTimestampDesc(accountId, startDate, endDate));
         } else if (startDate != null) {
-            // Only start date provided, filter from start date onwards
-            transactions = transactionRepository.findBySourceAccount_IdAndTimestampAfter(accountId, startDate);
-            List<Transaction> destinationTransactions = transactionRepository.findByDestinationAccount_IdAndTimestampAfter(accountId, startDate);
-            transactions.addAll(destinationTransactions);
+            transactions.addAll(transactionRepository.findBySourceAccountIdAndTimestampAfterOrderByTimestampDesc(accountId, startDate)); // Added OrderBy for consistency
+            transactions.addAll(transactionRepository.findByDestinationAccountIdAndTimestampAfterOrderByTimestampDesc(accountId, startDate)); // Added OrderBy for consistency
         } else if (endDate != null) {
-            // Only end date provided, filter up to end date
-            transactions = transactionRepository.findBySourceAccount_IdAndTimestampBefore(accountId, endDate);
-            List<Transaction> destinationTransactions = transactionRepository.findByDestinationAccount_IdAndTimestampBefore(accountId, endDate);
-            transactions.addAll(destinationTransactions);
+            transactions.addAll(transactionRepository.findBySourceAccountIdAndTimestampBeforeOrderByTimestampDesc(accountId, endDate)); // Added OrderBy for consistency
+            transactions.addAll(transactionRepository.findByDestinationAccountIdAndTimestampBeforeOrderByTimestampDesc(accountId, endDate)); // Added OrderBy for consistency
         } else {
-            // No dates provided, get all transactions for the account
-            transactions = transactionRepository.findBySourceAccount_Id(accountId);
-            List<Transaction> destinationTransactions = transactionRepository.findByDestinationAccount_Id(accountId);
-            transactions.addAll(destinationTransactions);
+            transactions.addAll(transactionRepository.findBySourceAccountId(accountId));
+            transactions.addAll(transactionRepository.findByDestinationAccountId(accountId));
         }
 
-        // Remove duplicates if any (e.g., if a transaction appears as both source and destination due to an oversight in logic, though typically it should be two distinct records for a transfer)
-        // A more robust way to handle this for transfers is to query for transactions where the 'amount' field signifies a debit/credit appropriately.
-        // For simplicity and based on the current transaction recording, we'll just convert and collect.
+        // Using a Set for distinctness if multiple queries return the same transaction object
+        // Or simply `distinct()` on the stream.
         return transactions.stream()
-                .distinct() // In case a single transaction is somehow picked up by both source and destination queries (less likely with distinct IDs)
+                .distinct() // Ensure unique transactions
+                .sorted((t1, t2) -> t2.getTimestamp().compareTo(t1.getTimestamp())) // Sort by timestamp descending
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
 
-    // Helper method to convert Transaction entity to TransactionResponse DTO
-    private TransactionResponse convertToDto(Transaction transaction) {
-        TransactionResponse dto = new TransactionResponse();
-        dto.setId(transaction.getId());
-        dto.setTransactionType(transaction.getTransactionType());
-        dto.setAmount(transaction.getAmount());
-        dto.setTimestamp(transaction.getTimestamp());
-        dto.setReferenceId(transaction.getReferenceId());
-
-        // Include source and destination account numbers if available
-        if (transaction.getSourceAccount() != null) {
-            dto.setSourceAccountNumber(transaction.getSourceAccount().getAccountNumber());
-        }
-        if (transaction.getDestinationAccount() != null) {
-            dto.setDestinationAccountNumber(transaction.getDestinationAccount().getAccountNumber());
-        }
-        return dto;
-    }
-    // Inside TransactionService.java
+    /**
+     * Retrieves all transactions in the system, with optional date filtering (for admin/audit).
+     * @param startDateString Optional start date string (e.g., "YYYY-MM-DD").
+     * @param endDateString Optional end date string (e.g., "YYYY-MM-DD").
+     * @return A list of TransactionResponse DTOs.
+     * @throws IllegalArgumentException if date strings are invalid.
+     */
     public List<TransactionResponse> getAllTransactions(String startDateString, String endDateString) {
         List<Transaction> transactions;
         LocalDateTime startDate = null;
@@ -150,13 +135,13 @@ public class TransactionService {
         }
 
         if (startDate != null && endDate != null) {
-            transactions = transactionRepository.findByTimestampBetween(startDate, endDate);
+            transactions = transactionRepository.findByTimestampBetweenOrderByTimestampDesc(startDate, endDate); // Added OrderBy
         } else if (startDate != null) {
-            transactions = transactionRepository.findByTimestampAfter(startDate);
+            transactions = transactionRepository.findByTimestampAfterOrderByTimestampDesc(startDate); // Added OrderBy
         } else if (endDate != null) {
-            transactions = transactionRepository.findByTimestampBefore(endDate);
+            transactions = transactionRepository.findByTimestampBeforeOrderByTimestampDesc(endDate); // Added OrderBy
         } else {
-            transactions = transactionRepository.findAll(); // Get all transactions if no date filter
+            transactions = transactionRepository.findAllByOrderByTimestampDesc(); // Changed to get all sorted
         }
 
         return transactions.stream()
@@ -164,5 +149,22 @@ public class TransactionService {
                 .collect(Collectors.toList());
     }
 
+    // Helper method to convert Transaction entity to TransactionResponse DTO
+    private TransactionResponse convertToDto(Transaction transaction) {
+        TransactionResponse dto = new TransactionResponse();
+        dto.setId(transaction.getId());
+        dto.setTransactionType(transaction.getTransactionType());
+        dto.setAmount(transaction.getAmount());
+        dto.setTimestamp(transaction.getTimestamp());
+        dto.setReferenceId(transaction.getReferenceId());
 
+        // Include source and destination account numbers if available
+        if (transaction.getSourceAccount() != null) {
+            dto.setSourceAccountNumber(transaction.getSourceAccount().getAccountNumber());
+        }
+        if (transaction.getDestinationAccount() != null) {
+            dto.setDestinationAccountNumber(transaction.getDestinationAccount().getAccountNumber());
+        }
+        return dto;
+    }
 }
